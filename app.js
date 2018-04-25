@@ -6,13 +6,15 @@ const logger = require("morgan");
 const favicon = require("serve-favicon");
 const cookieParser = require("cookie-parser");
 const session = require("express-session");
-const fileStore = require("session-file-store")(session);
+const mongoStore = require("connect-mongo")(session);
 const bodyParser = require("body-parser");
 
+const config = require("./config/config.js");
 const mongoose = require("./config/mongoose.js");
 
-// 导入接口地址
+/* routers import */
 const login = require("./routes/login.js");
+const db = mongoose();
 
 const app = express();
 
@@ -20,15 +22,21 @@ app.use(logger("dev"));
 app.use(express.static(path.join(__dirname, "public")));
 app.use(favicon(path.join(__dirname, "public", "favicon.ico")));
 app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.urlencoded({ extended: true }));
 
 app.use(cookieParser("session-common-id"));
 app.use(
   session({
     name: "session-common-id",
     secret: "session-common-id",
-    store: new fileStore(), // 本地存储session（文本文件，也可以选择其他store，比如redis的）
-    cookie: { maxAge: 60 * 1000 * 30 }, //设置maxAge失效过期
+    store: new mongoStore({
+      url: config.mongodb,
+      collection: "sessions",
+      ttl:10, // session过期时间
+      autoRemoveInterval: 10,
+      touchAfter: 24 * 3600
+    }),
+    cookie: { maxAge: 60 * 1000 * 30 }, //设置maxAge失效过期 30分钟
     resave: false, // 是否每次都重新保存会话，建议false
     saveUninitialized: false // 是否自动保存未初始化的会话，建议false
   })
@@ -48,7 +56,7 @@ app.all("*", function(req, res, next) {
   next();
 });
 
-/* 路由划分 */
+/* routers */
 app.use("/login", login);
 
 // catch 404 and forward to error handler

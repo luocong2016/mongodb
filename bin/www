@@ -4,7 +4,9 @@ const app = require("../app");
 const debug = require("debug")("serverapi:server");
 const http = require("http");
 
-const port = normalizePort(process.env.PORT || "3000");
+const config = require("../config/config.js");
+
+const port = normalizePort(process.env.PORT || config.port);
 
 app.set("port", port);
 
